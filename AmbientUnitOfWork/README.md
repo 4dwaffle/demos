@@ -2,7 +2,8 @@
 
 This runnable EF Core example uses a real SQL Server transaction and two
 repositories. The integration tests demonstrate commit, rollback, nested scopes,
-ambient cleanup, parallel calls, and cancellation.
+ambient cleanup, parallel calls, and cancellation. `EfCoreTransactionTests` show
+the same commit and rollback behavior using EF Core transactions directly.
 
 ## Run
 
@@ -41,6 +42,10 @@ Open the tests in this order: `Commit_PersistsWritesFromTwoRepositories`,
 `ExceptionBeforeCommit_RollsBackBothRepositories`,
 `InnerScope_CannotCommitOuterTransaction`, then
 `AfterDisposal_RepositoryUsesFreshContext`.
+
+For a comparison without the ambient provider, open `EfCoreTransactionTests`.
+Those tests create a `DbContext`, call `BeginTransactionAsync`, save both entities,
+and either commit or dispose the transaction.
 
 **Scope:** A unit of work is keyed by one `DbContext` type and represents one
 database transaction. `AsyncLocal` flows across `await`; it does not make

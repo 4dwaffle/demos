@@ -21,3 +21,6 @@ public sealed class SqlServerFixture : IAsyncLifetime
 
     public Task DisposeAsync() => container.DisposeAsync().AsTask();
 }
+
+[CollectionDefinition("SqlServer")]
+public sealed class SqlServerCollection : ICollectionFixture<SqlServerFixture>;

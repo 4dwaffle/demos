@@ -5,7 +5,8 @@ using Xunit;
 
 namespace AmbientUnitOfWork.Tests;
 
-public sealed class AmbientUnitOfWorkTests(SqlServerFixture fixture) : IClassFixture<SqlServerFixture>
+[Collection("SqlServer")]
+public sealed class AmbientUnitOfWorkTests(SqlServerFixture fixture)
 {
     private readonly IDbContextFactory<DemoDbContext> factory = fixture.Factory;
 
