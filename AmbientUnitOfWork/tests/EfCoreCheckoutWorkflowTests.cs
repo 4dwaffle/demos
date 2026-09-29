@@ -13,14 +13,17 @@ public sealed class EfCoreCheckoutWorkflowTests(SqlServerFixture fixture)
     [Fact]
     public async Task WithoutTransaction_FailedReservationLeavesOrderBehind()
     {
+        // Arrange
         var sku = $"ef-checkout-{Guid.NewGuid():N}";
 
+        // Act
         await using (var context = await factory.CreateDbContextAsync())
         {
             var checkout = CreateCheckout(context);
             await Assert.ThrowsAsync<OutOfStockException>(() => checkout.PlaceOrderAsync(sku, inStock: false));
         }
 
+        // Assert
         await using var verification = await factory.CreateDbContextAsync();
         Assert.NotNull(await verification.Orders.SingleOrDefaultAsync(order => order.Sku == sku));
         Assert.False(await verification.InventoryReservations.AnyAsync(reservation => reservation.Sku == sku));
@@ -29,8 +32,10 @@ public sealed class EfCoreCheckoutWorkflowTests(SqlServerFixture fixture)
     [Fact]
     public async Task ExplicitTransaction_FailedReservationRollsBackOrder()
     {
+        // Arrange
         var sku = $"ef-checkout-{Guid.NewGuid():N}";
 
+        // Act
         await using (var context = await factory.CreateDbContextAsync())
         {
             await using var transaction = await context.Database.BeginTransactionAsync();
@@ -38,6 +43,7 @@ public sealed class EfCoreCheckoutWorkflowTests(SqlServerFixture fixture)
             await Assert.ThrowsAsync<OutOfStockException>(() => checkout.PlaceOrderAsync(sku, inStock: false));
         }
 
+        // Assert
         await using var verification = await factory.CreateDbContextAsync();
         Assert.False(await verification.Orders.AnyAsync(order => order.Sku == sku));
         Assert.False(await verification.InventoryReservations.AnyAsync(reservation => reservation.Sku == sku));
@@ -46,8 +52,10 @@ public sealed class EfCoreCheckoutWorkflowTests(SqlServerFixture fixture)
     [Fact]
     public async Task ExplicitTransaction_SuccessCommitsOrderAndReservation()
     {
+        // Arrange
         var sku = $"ef-checkout-{Guid.NewGuid():N}";
 
+        // Act
         await using (var context = await factory.CreateDbContextAsync())
         {
             await using var transaction = await context.Database.BeginTransactionAsync();
@@ -56,6 +64,7 @@ public sealed class EfCoreCheckoutWorkflowTests(SqlServerFixture fixture)
             await transaction.CommitAsync();
         }
 
+        // Assert
         await using var verification = await factory.CreateDbContextAsync();
         var order = await verification.Orders.SingleAsync(order => order.Sku == sku);
         var reservation = await verification.InventoryReservations.SingleAsync(reservation => reservation.Sku == sku);

@@ -13,11 +13,14 @@ public sealed class CheckoutWorkflowTests(SqlServerFixture fixture)
     [Fact]
     public async Task WithoutAmbientScope_FailedReservationLeavesOrderBehind()
     {
+        // Arrange
         var sku = $"checkout-{Guid.NewGuid():N}";
         var checkout = CreateCheckout();
 
+        // Act
         await Assert.ThrowsAsync<OutOfStockException>(() => checkout.PlaceOrderAsync(sku, inStock: false));
 
+        // Assert
         await using var verification = await factory.CreateDbContextAsync();
         Assert.NotNull(await verification.Orders.SingleOrDefaultAsync(order => order.Sku == sku));
         Assert.Empty(await verification.InventoryReservations.Where(reservation => reservation.Sku == sku).ToListAsync());
@@ -26,9 +29,11 @@ public sealed class CheckoutWorkflowTests(SqlServerFixture fixture)
     [Fact]
     public async Task AmbientScope_FailedReservationRollsBackOrder()
     {
+        // Arrange
         var sku = $"checkout-{Guid.NewGuid():N}";
         var checkout = CreateCheckout();
 
+        // Act
         await Assert.ThrowsAsync<OutOfStockException>(async () =>
         {
             await using var uow = new UnitOfWorkProvider<DemoDbContext>();
@@ -36,6 +41,7 @@ public sealed class CheckoutWorkflowTests(SqlServerFixture fixture)
             await uow.CommitAsync();
         });
 
+        // Assert
         await using var verification = await factory.CreateDbContextAsync();
         Assert.Empty(await verification.Orders.Where(order => order.Sku == sku).ToListAsync());
         Assert.Empty(await verification.InventoryReservations.Where(reservation => reservation.Sku == sku).ToListAsync());
@@ -44,15 +50,18 @@ public sealed class CheckoutWorkflowTests(SqlServerFixture fixture)
     [Fact]
     public async Task AmbientScope_SuccessCommitsOrderAndReservation()
     {
+        // Arrange
         var sku = $"checkout-{Guid.NewGuid():N}";
         var checkout = CreateCheckout();
 
+        // Act
         await using (var uow = new UnitOfWorkProvider<DemoDbContext>())
         {
             await checkout.PlaceOrderAsync(sku, inStock: true);
             await uow.CommitAsync();
         }
 
+        // Assert
         await using var verification = await factory.CreateDbContextAsync();
         var order = await verification.Orders.SingleAsync(order => order.Sku == sku);
         var reservation = await verification.InventoryReservations.SingleAsync(reservation => reservation.Sku == sku);

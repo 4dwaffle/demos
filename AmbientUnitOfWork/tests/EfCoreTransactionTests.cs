@@ -13,9 +13,11 @@ public sealed class EfCoreTransactionTests(SqlServerFixture fixture)
     [Fact]
     public async Task Commit_PersistsBothEntities()
     {
+        // Arrange
         var product = new Product { Name = $"ef-commit-{Guid.NewGuid():N}" };
         var customer = new Customer { Email = $"ef-commit-{Guid.NewGuid():N}@example.test" };
 
+        // Act
         await using (var context = await factory.CreateDbContextAsync())
         {
             await using var transaction = await context.Database.BeginTransactionAsync();
@@ -26,6 +28,7 @@ public sealed class EfCoreTransactionTests(SqlServerFixture fixture)
             await transaction.CommitAsync();
         }
 
+        // Assert
         await using var verification = await factory.CreateDbContextAsync();
         Assert.NotNull(await verification.Products.FindAsync(product.Id));
         Assert.NotNull(await verification.Customers.FindAsync(customer.Id));
@@ -34,9 +37,11 @@ public sealed class EfCoreTransactionTests(SqlServerFixture fixture)
     [Fact]
     public async Task DisposeWithoutCommit_RollsBackSavedChanges()
     {
+        // Arrange
         var product = new Product { Name = $"ef-rollback-{Guid.NewGuid():N}" };
         var customer = new Customer { Email = $"ef-rollback-{Guid.NewGuid():N}@example.test" };
 
+        // Act
         await using (var context = await factory.CreateDbContextAsync())
         {
             await using var transaction = await context.Database.BeginTransactionAsync();
@@ -47,6 +52,7 @@ public sealed class EfCoreTransactionTests(SqlServerFixture fixture)
             Assert.NotNull(await context.Customers.FindAsync(customer.Id));
         }
 
+        // Assert
         await using var verification = await factory.CreateDbContextAsync();
         Assert.Null(await verification.Products.FindAsync(product.Id));
         Assert.Null(await verification.Customers.FindAsync(customer.Id));
