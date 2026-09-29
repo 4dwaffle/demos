@@ -47,6 +47,27 @@ For a comparison without the ambient provider, open `EfCoreTransactionTests`.
 Those tests create a `DbContext`, call `BeginTransactionAsync`, save both entities,
 and either commit or dispose the transaction.
 
+## Why use the ambient scope?
+
+Open `CheckoutWorkflowTests`. The checkout workflow calls an order service and
+an inventory service. Each service owns a repository; neither receives a
+`DbContext` or transaction from the workflow.
+
+- Without an outer scope, the order repository commits its write. If stock is
+  unavailable, the inventory service throws and the order remains in the database.
+- With an outer scope, the order write and the reservation share one transaction.
+  The same failure rolls back the order; a successful checkout commits both.
+
+The stock failure is simulated so the difference is deterministic. Both services
+use the **same database**. This example does not provide an atomic transaction
+across separate databases.
+
+For the EF-only version of the same checkout, open `EfCoreCheckoutWorkflowTests`.
+The caller creates one `DbContext`, passes it to both services, and uses
+`BeginTransactionAsync` and `CommitAsync` for the atomic case. Its three tests
+show the same partial write, rollback, and successful commit. This is a simpler
+choice when sharing one `DbContext` explicitly fits the application design.
+
 **Scope:** A unit of work is keyed by one `DbContext` type and represents one
 database transaction. `AsyncLocal` flows across `await`; it does not make
 separate databases or independent `DbContext` types atomic. Do not run
